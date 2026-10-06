@@ -21,14 +21,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y git zip unzip openjdk-17-jdk python3-pip \
             autoconf libtool pkg-config zlib1g-dev libncurses5-dev \
-            libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+            libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev \
+            libegl1 libgl1
 
       - name: Dependências Python do build
         run: pip3 install --upgrade buildozer "cython==0.29.37"
 
       - name: Testes do core (sem UI/Qt)
         run: |
-          pip3 install qrcode pillow yt-dlp plyer kivy PySide6
+          pip3 install qrcode pillow yt-dlp plyer kivy kivymd PySide6
           python3 -m unittest \
             tests.test_m3u_parser tests.test_url_router tests.test_config \
             tests.test_errors tests.test_downloader tests.test_history \
