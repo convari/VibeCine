@@ -28,7 +28,7 @@ jobs:
 
       - name: Testes do core (sem UI/Qt)
         run: |
-          pip3 install qrcode pillow yt-dlp plyer
+          pip3 install qrcode pillow yt-dlp plyer kivy PySide6
           python3 -m unittest \
             tests.test_m3u_parser tests.test_url_router tests.test_config \
             tests.test_errors tests.test_downloader tests.test_history \

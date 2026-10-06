@@ -13,7 +13,11 @@ from __future__ import annotations
 
 import sys
 import urllib.parse
-import winreg
+
+if sys.platform == "win32":
+    import winreg
+else:
+    winreg = None
 
 from .branding import APP_NAME, APP_PRODUCT
 from .downloader import redact_url
@@ -70,6 +74,8 @@ def _entry_script() -> str:
 
 def register_protocol(executable: str | None = None) -> None:
     """Registra vibcine:// no HKCU (apenas usuário atual, sem admin)."""
+    if winreg is None:
+        raise RuntimeError("Registro de protocolo só suportado no Windows.")
     base = rf"Software\Classes\{PROTOCOL}"
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, base) as key:
         winreg.SetValueEx(key, None, 0, winreg.REG_SZ,
@@ -87,6 +93,8 @@ def register_protocol(executable: str | None = None) -> None:
 
 def unregister_protocol() -> None:
     """Remove o registro do protocolo (usado pelo desinstalador)."""
+    if winreg is None:
+        return
     for sub in (r"shell\open\command", r"shell\open", "shell", "DefaultIcon", ""):
         try:
             winreg.DeleteKey(winreg.HKEY_CURRENT_USER,

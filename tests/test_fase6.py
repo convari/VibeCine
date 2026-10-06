@@ -20,8 +20,11 @@ class TestPaths(unittest.TestCase):
     def test_default_config_path(self):
         # Em desenvolvimento, config.json fica na raiz do projeto.
         from app.core.config import CONFIG_FILE
+        from app.core.branding import APP_NAME
         self.assertTrue(CONFIG_FILE.endswith("config.json"))
-        self.assertIn("vibcine", CONFIG_FILE.lower())
+        # O diretório do repo pode ser "vibcine" ou "vibecine" (com 'e')
+        cfg_lower = CONFIG_FILE.lower()
+        self.assertTrue("vibcine" in cfg_lower or "vibecine" in cfg_lower)
 
 
 class TestProtocolo(unittest.TestCase):
