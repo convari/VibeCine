@@ -1,0 +1,147 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Build outputs
+dist/
+release/
+build/
+bin/
+*.apk
+*.aab
+
+# Buildozer
+.buildozer/
+.bin/
+
+# Python-for-android
+*.ap_
+*.so
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.vscode/*
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs and temp
+*.log
+*.tmp
+*.temp
+tmp*/
+temp*/
+*.bak
+
+# Python testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+
+# Windows
+*.bat
+*.cmd
+
+# Local config (contains user paths)
+config.json
+
+# External tools (downloaded binaries - large, not source)
+*.exe
+deno.exe
+ffmpeg.exe
+ffprobe.exe
+yt-dlp.exe
+
+# Buildozer / Python-for-android cache
+.android/
+.gradle/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Data directories (user data)
+data/
+data_*/
+
+# Backup
+*_backup*
+*_backup*/
+_backup*
+
+# Design/source assets (keep if part of repo, but design/ is small)
+# design/ is kept
+
+# Editor backup
+*~
+
+# Cython
+*.c
+*.cpp
+*.h
+*.pxd
+*.pyx
+
+# Jupyter
+.ipynb_checkpoints
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Profiling
+*.prof
+*.profraw
+
+# Mypy
+.dmypy.json
+dmypy.json
+
+# Coverage
+.coverage*
+coverage.xml
+
+# Pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Packaging
+*.egg-info/
+*.egg
+*.whl
+
+# Type checking
+*.pyi
+.stubs/
+
+# Build artifacts
+*.egg
+*.whl
+*.tar.gz
+*.tgz
+
+# OS
+ehthumbs.db
+$RECYCLE.BIN/

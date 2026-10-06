@@ -1,0 +1,22 @@
+M3U Downloader Pro - Correção YouTube
+
+O problema de áudio era causado principalmente pela configuração antiga do
+yt-dlp e pela ausência do runtime JavaScript exigido atualmente para suporte
+completo ao YouTube.
+
+Use:
+    ATUALIZAR.bat
+
+O atualizador mantém tudo dentro desta pasta:
+    yt-dlp.exe
+    ffmpeg.exe
+    ffprobe.exe
+    deno.exe
+
+Para instalar dependências Python:
+    instalar.bat
+
+Para iniciar:
+    iniciar.bat
+
+Os comandos usam "python", não "py" nem "pip" sozinho.
