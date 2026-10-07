@@ -6,8 +6,9 @@ on:
     tags: ["android-v*"]      # ou por tag  (ex.: android-v2.0.0)
 
 jobs:
-  apk:
+  build-android:
     runs-on: ubuntu-22.04
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -25,30 +26,93 @@ jobs:
             libegl1 libgl1
 
       - name: Configurar Android SDK
+        id: android-sdk
         run: |
-          # Instalar Android SDK command line tools
+          set -euo pipefail
+          
+          SDK_DIR="${HOME}/android-sdk"
+          CMDLINE_TOOLS_DIR="${SDK_DIR}/cmdline-tools/latest"
+          SDKMANAGER="${CMDLINE_TOOLS_DIR}/bin/sdkmanager"
+          
+          # Verificar se SDK já está instalado e funcional
+          if [[ -x "${SDK_DIR}/cmdline-tools/latest/bin/sdkmanager" ]]; then
+            echo "Android SDK já instalado em ${SDK_DIR}"
+            export ANDROID_SDK_ROOT="${HOME}/android-sdk"
+            export ANDROID_HOME="${HOME}/android-sdk"
+            export PATH="${HOME}/android-sdk/cmdline-tools/latest/bin:${HOME}/android-sdk/platform-tools:\$PATH"
+            echo "ANDROID_SDK_ROOT=${HOME}/android-sdk" >> $GITHUB_ENV
+            echo "ANDROID_HOME=${HOME}/android-sdk" >> $GITHUB_ENV
+            echo "${HOME}/android-sdk/cmdline-tools/latest/bin:${HOME}/android-sdk/platform-tools:\$PATH" >> $GITHUB_PATH
+            exit 0
+          fi
+          
+          echo "Instalando Android SDK..."
           SDK_DIR="${HOME}/android-sdk"
           mkdir -p "${SDK_DIR}/cmdline-tools"
           cd "${SDK_DIR}/cmdline-tools"
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
+          
+          # Download das command line tools
+          echo "Baixando Android SDK Command Line Tools..."
+          wget --retry-connrefused --retry-delay=5 --tries=3 --timeout=60 \
+            https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip \
+            -O cmdline-tools.zip
+          
+          # Verificar se download ocorreu
+          if [[ ! -f cmdline-tools.zip ]] || [[ ! -s cmdline-tools.zip ]]; then
+            echo "ERRO: Falha ao baixar command line tools"
+            exit 1
+          fi
+          
+          # Verificar integridade do ZIP
+          if ! unzip -t cmdline-tools.zip > /dev/null 2>&1; then
+            echo "ERRO: ZIP corrompido"
+            exit 1
+          fi
+          
           unzip -q cmdline-tools.zip
+          
+          # Verificar se extraiu corretamente
+          if [[ ! -d "cmdline-tools" ]]; then
+            echo "ERRO: Falha ao extrair command line tools"
+            exit 1
+          fi
+          
           mv cmdline-tools latest
           cd ..
-          rm cmdline-tools.zip
-
-          # Configurar variáveis de ambiente
+          rm -f cmdline-tools.zip
+          
+          # Configurar variáveis de ambiente para esta sessão
+          SDK_DIR="${HOME}/android-sdk"
           export ANDROID_SDK_ROOT="${SDK_DIR}"
           export ANDROID_HOME="${SDK_DIR}"
-          export PATH="${SDK_DIR}/cmdline-tools/latest/bin:${SDK_DIR}/platform-tools:${PATH}"
-
+          export PATH="${SDK_DIR}/cmdline-tools/latest/bin:${SDK_DIR}/platform-tools:\$PATH"
+          
+          # Persistir para steps seguintes
+          echo "ANDROID_SDK_ROOT=${HOME}/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_HOME=${HOME}/android-sdk" >> $GITHUB_ENV
+          echo "${HOME}/android-sdk/cmdline-tools/latest/bin:${HOME}/android-sdk/platform-tools:\$PATH" >> $GITHUB_PATH
+          
           # Aceitar licenças automaticamente
-          yes | sdkmanager --licenses > /dev/null 2>&1
-
+          echo "Aceitando licenças do Android SDK..."
+          yes | sdkmanager --licenses
+          
           # Instalar componentes necessários do SDK
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest" > /dev/null 2>&1
-
+          echo "Instalando componentes do Android SDK..."
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest"
+          
           # Verificar instalações
-          sdkmanager --list_installed | grep -E "(platform-tools|platforms;android-34|build-tools;34.0.0|cmdline-tools)"
+          echo "Verificando instalações..."
+          sdkmanager --list_installed | grep -E "(platform-tools|platforms;android-34|build-tools;34.0.0|cmdline-tools)" || true
+          
+          # Verificar se aidl está disponível e executável
+          AIDL_PATH=$(find "${HOME}/android-sdk/build-tools" -name "aidl" -type f -executable 2>/dev/null | head -1)
+          if [[ -z "${AIDL_PATH}" ]]; then
+            echo "ERRO: aidl não encontrado ou não executável em build-tools"
+            exit 1
+          else
+            echo "aidl encontrado em: ${AIDL_PATH}"
+            echo "aidl_version=$(${AIDL_PATH} --version 2>/dev/null || echo 'versão desconhecida')"
+          fi
 
       - name: Setup Python (build)
         uses: actions/setup-python@v5
@@ -64,6 +128,7 @@ jobs:
             libegl1 libgl1
 
       - name: Configurar variáveis de ambiente Android
+        if: steps.configure-android-sdk.conclusion == 'success'
         run: |
           echo "ANDROID_SDK_ROOT=${HOME}/android-sdk" >> $GITHUB_ENV
           echo "ANDROID_HOME=${HOME}/android-sdk" >> $GITHUB_ENV
@@ -74,18 +139,42 @@ jobs:
 
       - name: Testes do core (sem UI/Qt)
         run: |
-          pip3 install qrcode pillow yt-dlp plyer kivy kivymd PySide6
+          pip3 install qrcode pillow yt-dlp plyer kivy kivymd
           python3 -m unittest \
             tests.test_m3u_parser tests.test_url_router tests.test_config \
             tests.test_errors tests.test_downloader tests.test_history \
             tests.test_share tests.test_fase6 tests.test_android
 
+      - name: Cache do Android SDK
+        uses: actions/cache@v4
+        with:
+          path: ~/android-sdk
+          key: android-sdk-${{ runner.os }}-api34-bt34.0.0-ndk25b-cmdline11076708
+          restore-keys: |
+            android-sdk-${{ runner.os }}-api34-bt34.0.0-ndk25b-
+            android-sdk-${{ runner.os }}-api34-bt34.0.0-
+            android-sdk-${{ runner.os }}-api34-bt34.0.0-
+            android-sdk-${{ runner.os }}-api34-
+            android-sdk-${{ runner.os }}-
+
       - name: Cache do Buildozer
         uses: actions/cache@v4
         with:
           path: .buildozer
-          key: buildozer-${{ hashFiles('buildozer.spec') }}
-          restore-keys: buildozer-
+          key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            buildozer-${{ runner.os }}-
+
+      - name: Dependências Python do build
+        run: pip3 install --upgrade buildozer "cython==0.29.37"
+
+      - name: Testes do core (sem UI/Qt)
+        run: |
+          pip3 install qrcode pillow yt-dlp plyer kivy kivymd
+          python3 -m unittest \
+            tests.test_m3u_parser tests.test_url_router tests.test_config \
+            tests.test_errors tests.test_downloader tests.test_history \
+            tests.test_share tests.test_fase6 tests.test_android
 
       - name: Gerar APK (debug)
         run: buildozer -v android debug
@@ -96,67 +185,13 @@ jobs:
           name: vibecine-apk
           path: bin/*.apk
 
-  aab:
-    needs: apk
-    runs-on: ubuntu-22.04
-    # AAB (release) só em tags android-v*; exige chave de assinatura.
-    if: startsWith(github.ref, 'refs/tags/android-v')
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configurar Android SDK
-        run: |
-          # Instalar Android SDK command line tools
-          SDK_DIR="${HOME}/android-sdk"
-          mkdir -p "${SDK_DIR}/cmdline-tools"
-          cd "${SDK_DIR}/cmdline-tools"
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-          unzip -q cmdline-tools.zip
-          mv cmdline-tools latest
-          cd ..
-          rm cmdline-tools.zip
-
-          # Configurar variáveis de ambiente
-          export ANDROID_SDK_ROOT="${SDK_DIR}"
-          export ANDROID_HOME="${SDK_DIR}"
-          export PATH="${SDK_DIR}/cmdline-tools/latest/bin:${SDK_DIR}/platform-tools:${PATH}"
-
-          # Aceitar licenças automaticamente
-          yes | sdkmanager --licenses > /dev/null 2>&1
-
-          # Instalar componentes necessários do SDK
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest" > /dev/null 2>&1
-
-          # Verificar instalações
-          sdkmanager --list_installed | grep -E "(platform-tools|platforms;android-34|build-tools;34.0.0|cmdline-tools)"
-
-      - name: Setup Python (build)
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Configurar variáveis de ambiente Android
-        run: |
-          echo "ANDROID_SDK_ROOT=${HOME}/android-sdk" >> $GITHUB_ENV
-          echo "ANDROID_HOME=${HOME}/android-sdk" >> $GITHUB_ENV
-          echo "${HOME}/android-sdk/cmdline-tools/latest/bin:${HOME}/android-sdk/platform-tools:\$PATH" >> $GITHUB_PATH
-
-      - run: |
-          sudo apt-get update && sudo apt-get install -y git zip unzip \
-            openjdk-17-jdk python3-pip autoconf libtool pkg-config \
-            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake \
-            libffi-dev libssl-dev
-          pip3 install --upgrade buildozer "cython==0.29.37"
-      - uses: actions/cache@v4
-        with:
-          path: .buildozer
-          key: buildozer-${{ hashFiles('buildozer.spec') }}
-          restore-keys: buildozer-
-      # Assinatura: defina os secrets KEYSTORE_B64/KEYSTORE_PASSWORD e o bloco
-      # [app] android.release_artifact... (ver docs/ANDROID.md, seção AAB).
-      - name: Gerar AAB (release — requer keystore via secrets)
+      - name: Gerar AAB (release)
+        if: startsWith(github.ref, 'refs/tags/android-v')
         run: buildozer -v android release
-      - uses: actions/upload-artifact@v4
+
+      - name: Publicar artefato AAB
+        if: startsWith(github.ref, 'refs/tags/android-v')
+        uses: actions/upload-artifact@v4
         with:
           name: vibecine-aab
           path: bin/*.aab

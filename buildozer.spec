@@ -38,8 +38,8 @@ android.archs = arm64-v8a, armeabi-v7a
 # [buildozer]
 log_level = 2
 
-# Aceita automaticamente as licenças do Android SDK
-android.accept_sdk_license = True
-
 # Versão das build-tools a ser usada (compatível com android.api = 34)
 android.build_tools_version = 34.0.0
+
+# Caminho do SDK Android (configurado no CI via ANDROID_SDK_ROOT)
+# Não definimos android.accept_sdk_license aqui - o CI aceita as licenças manualmente
