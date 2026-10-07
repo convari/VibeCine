@@ -35,5 +35,11 @@ android.minapi = 24
 android.ndk = 25b
 android.archs = arm64-v8a, armeabi-v7a
 
-[buildozer]
+# [buildozer]
 log_level = 2
+
+# Aceita automaticamente as licenças do Android SDK
+android.accept_sdk_license = True
+
+# Versão das build-tools a ser usada (compatível com android.api = 34)
+android.build_tools_version = 34.0.0
